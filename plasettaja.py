@@ -1,5 +1,8 @@
 import random
 import pandas as pd
+from openpyxl import Workbook
+from openpyxl.styles import PatternFill
+
 
 df = pd.read_csv("osallistujat.csv")
 
@@ -18,19 +21,68 @@ def jaa_istumapaikat(df, poydat):
             poydat["Pöytä 2"].append(vieras)
     return poydat
 
-poydat = jaa_istumapaikat(df, poydat)
-
-for poyta, vieraat in poydat.items():
-    print(f"{poyta}:")
-    for vieras in vieraat:
-        print(f" {vieras['Nimi']} (Email: {vieras['Email']}, Seuruetoive: {vieras['Seuruetoive']} Ruokatoive: {vieras['Ruokatoive']}, Juomatoive: {vieras['Juomatoive']}, Ainejärjestö: {vieras['Ainejärjestö']}, Ilmoittautumisaika: {vieras['Ilmoittautumisaika']})")
-    print()
+def tallena_istumapaikat_excel(poydat, tiedostonimi="plase.xlsx"):
+    wb = Workbook()
     
-def tallenna_istumapaikat(poydat, tiedostonimi):
-    with open(tiedostonimi, "w") as f:
-        f.write("Pöytä,Nimi,Email,Seuruetoive,Ruokatoive,Juomatoive,Ainejärjestö,Ilmoittautumisaika\n")
-        for poyta, vieraat in poydat.items():
-            for vieras in vieraat:
-                f.write(f"{poyta},{vieras['Nimi']},{vieras['Email']},{vieras['Seuruetoive']},{vieras['Ruokatoive']},{vieras['Juomatoive']}, {vieras['Ainejärjestö']}, {vieras['Ilmoittautumisaika']}\n")
+    ws1 = wb.active
+    ws1.title = "Holilliset vs Holittomat"
+    
+    ws1.append(["Nimi", "Email", "Seuruetoive", "Ruokatoive", "Juomatoive", "Ainejärjestö", "Ilmoittautumisaika"])
+    
+    alkoholiton_fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
+    alkoholillinen_fill = PatternFill(start_color="00FF00", end_color="00FF00", fill_type="solid")
+    
+    for poyta, vieraat in poydat.items():
+        for vieras in vieraat:
+            row = [
+                poyta,
+                vieras['Nimi'],
+                vieras['Email'],
+                vieras['Seuruetoive'],
+                vieras['Ruokatoive'],
+                vieras['Juomatoive'],
+                vieras['Ainejärjestö'],
+                vieras['Ilmoittautumisaika'],
+            ]
+            
+            ws1.append(row)
+            
+            if "alkoholiton" in vieras['Juomatoive'].lower():
+                for col in range(1,9):
+                    ws1.cell(row=ws1.max_row, column=col).fill = alkoholiton_fill
+            elif "alkoholillinen" in vieras['Juomatoive'].lower():
+                for col in range(1,9):
+                    ws1.cell(row=ws1.max_row, column=col).fill = alkoholillinen_fill
+                    
+    ws2 = wb.create_sheet("Ruokavalion mukaan")
+    ws2.append(["Nimi", "Email", "Seuruetoive", "Ruokatoive", "Juomatoive", "Ainejärjestö", "Ilmoittautumisaika"])
+
+
+    gluteeniton_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+    vegaani_fill = PatternFill(start_color="00FFFF", end_color="00FFFF", fill_type="solid")
+
+    for poyta, vieraat in poydat.items():
+        for vieras in vieraat:
+            row = [
+                poyta,
+                vieras['Nimi'],
+                vieras['Email'],
+                vieras['Seuruetoive'],
+                vieras['Ruokatoive'],
+                vieras['Juomatoive'],
+                vieras['Ainejärjestö'],
+                vieras['Ilmoittautumisaika']
+            ]
+            ws2.append(row)
+        
+            if "gluteeniton" in vieras['Ruokatoive'].lower():
+                for col in range(1,9):
+                    ws2.cell(row=ws2.max_row, column=col).fill = gluteeniton_fill
+            elif "vegaaninen" in vieras['Ruokatoive'].lower():
+                for col in range(1,9):
+                    ws2.cell(row=ws2.max_row, column=col).fill = vegaani_fill
                 
-tallenna_istumapaikat(poydat, "plase.csv")
+    wb.save(tiedostonimi)
+
+poydat = jaa_istumapaikat(df, poydat)
+tallena_istumapaikat_excel(poydat)
